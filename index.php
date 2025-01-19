@@ -1,3 +1,22 @@
+<?php
+
+$db_file = 'workout.db';
+
+try {
+    // Create a new SQLite3 database object
+    $db = new SQLite3($db_file);
+
+} catch (Exception $e) {
+    // Handle connection errors
+    echo "Connection failed: " . $e->getMessage();
+}
+
+
+
+?>
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -47,6 +66,24 @@
                 <!-- Body Part Dropdown -->
                 <select id="bodyPartSelect" class="px-4 py-2 border rounded-lg dark:bg-slate-600 dark:text-white">
                     <option value="">All Body Parts</option>
+                    <?php
+
+
+                    $query = "SELECT DISTINCT BodyPart FROM ExerciseType;";
+
+                    // Execute the query and store the result
+                    $result = $db->query($query);
+
+                    // Check if any results are returned
+                    if ($result) {
+                        // Loop through the results and print each distinct BodyPart
+                        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                            error_log($row['BodyPart']);
+                            echo "<option value=\"" . $row['BodyPart'] . "\">" . $row['BodyPart'] . "</option>";
+                        }
+                    }
+
+                    ?>
                 </select>
             </div>
 
@@ -64,6 +101,18 @@
     </div>
 
     <script>
+
+        function formatDate(timestamp) {
+            const date = new Date(timestamp);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
 
         // Store the start time (in milliseconds)
         let startTime = Date.now();
@@ -108,9 +157,11 @@
         };
 
         function saveWorkout() {
+            const endTime = Date.now(); // Capture the end time
             const ecc = document.getElementById('exerciseContainerContainer');
             const exercises = ecc.querySelectorAll(':scope > div'); // All exercise containers
-
+            const formattedStartTime = formatDate(startTime); // Format start time
+            const formattedEndTime = formatDate(endTime);
             const workoutData = [];
 
             exercises.forEach(exerciseContainer => {
@@ -132,32 +183,45 @@
                 });
             });
 
-            console.log(JSON.stringify(workoutData));
+            // Get the base URL of the current website (without the path)
+            const baseUrl = window.location.origin;
+
+            // Concatenate it with the relative path to your PHP script
+            const url = `${baseUrl}/save_workout.php`;
+
+            // Send the workout data, including start and end times
+            fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json", // Indicate JSON data
+                },
+                body: JSON.stringify({
+                    start_time: formattedStartTime,  // Send the start time
+                    end_time: formattedEndTime,      // Send the end time
+                    workout_data: workoutData  // Send the workout data
+                }), // Send the nested JSON structure
+            })
+                .then(response => response.json())  // Parse the JSON response
+                .then(data => console.log("Success:", data))  // Handle success
+                .catch(error => console.error("Error:", error));  // Handle errors
         }
 
-        function generateRandomWorkouts(count) {
-            const bodyParts = ['Chest', 'Legs', 'Back', 'Arms', 'Shoulders', 'Core'];
-            const workoutActions = ['Press', 'Curl', 'Raise', 'Squat', 'Pull', 'Push'];
-            const equipment = ['Barbell', 'Dumbbell', 'Kettlebell', 'Machine', 'Bodyweight'];
-            const workouts = [];
 
-            for (let i = 0; i < count; i++) {
-                const randomAction = workoutActions[Math.floor(Math.random() * workoutActions.length)];
-                const randomEquipment = equipment[Math.floor(Math.random() * equipment.length)];
-                const randomBodyPart = bodyParts[Math.floor(Math.random() * bodyParts.length)];
-                const workoutName = `${randomAction} ${randomEquipment}`;
+        <?php
+        $query = "SELECT * FROM ExerciseType";
+        $results = $db->query($query);
 
-                workouts.push({ name: workoutName, bodypart: randomBodyPart });
-            }
-
-            return workouts;
+        // Fetch all results and store them in an array of objects
+        $workouts = [];
+        while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
+            $workouts[] = [
+                'name' => $row['Name'],
+                'bodypart' => $row['BodyPart']
+            ];
         }
 
-        // Generate 100 random workouts
-        const randomWorkouts = generateRandomWorkouts(100);
-
-        // Example usage: update the workouts array in your code
-        const workouts = randomWorkouts;
+        echo 'const workouts = ' . json_encode($workouts) . ';';
+        ?>
 
         // Modal elements
         const modal = document.getElementById('exerciseModal');
@@ -168,7 +232,6 @@
         const finishBtn = document.getElementById('finishBtn');
         const cancelBtn = document.getElementById('cancelBtn');
 
-        finishBtn.addEventListener('click', saveWorkout);
         cancelBtn.addEventListener('click', () => {
             location.reload();
         });
