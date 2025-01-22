@@ -8,9 +8,7 @@ if ($inputData) {
     $endTime = $inputData['end_time']; // Get end time
     $workoutData = $inputData['workout_data']; // Get workout data
     
-    //TODO FIX!
-    $userId = 0;
-    //$userId = $inputData['user_id']; // Assuming the user ID is passed in the request
+    $userId = $inputData['user_id']; // Assuming the user ID is passed in the request
 
 
     try {
@@ -38,10 +36,11 @@ if ($inputData) {
                 throw new Exception("Failed to prepare statement: " . $db->lastErrorMsg());
             }
 
-            //TODO FIX!
-            $stmt->bindValue(':exercise_type_id', 0 , SQLITE3_INTEGER);
+            $exercise_type_id = $exercise['exercise_type_id'];
+            $stmt->bindValue(':exercise_type_id', $exercise_type_id , SQLITE3_INTEGER);
             $stmt->bindValue(':workout_id', $workoutId, SQLITE3_INTEGER);
             $stmt->execute();
+
 
             // Get the last inserted exercise ID
             $exerciseId = $db->lastInsertRowID();

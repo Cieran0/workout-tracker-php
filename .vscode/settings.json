@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "*.embeddedhtml": "html",
+        "sha256.h": "c",
+        "random": "c",
+        "stdlib.h": "c"
+    }
+}
