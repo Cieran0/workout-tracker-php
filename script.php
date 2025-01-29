@@ -1,7 +1,9 @@
 <?php
 header('Content-Type: application/javascript');
 
-if (isset($_SESSION['user_id'])) {
+session_start();
+
+if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
